@@ -20,16 +20,15 @@ const codeDisplay = document.getElementById("codeDisplay");
 const codeInput = document.getElementById("codeInput");
 const startDownload = document.getElementById("startDownload");
 
-// Valid Extensions & Size Limit
 const allowedTypes = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'image/jpeg',
-   'image/png',
+  'image/png',
   'image/jpg',
   'image/webp'
 ];
-const maxFileSize = 5 * 1024 * 1024; // 5 MB in bytes
+const maxFileSize = 5 * 1024 * 1024;
 
 function generateCode() {
   return Math.floor(10000 + Math.random() * 90000).toString();
@@ -38,22 +37,28 @@ function generateCode() {
 // Upload Handler
 startUpload.addEventListener("click", () => {
   const file = fileInput.files[0];
-  if (!file) {
-    alert("Please select a file.");
-    return;
-  }
+  if (!file) return alert("Please select a file.");
 
-  if (!allowedTypes.includes(file.type)) {
-    alert("Only PDF, DOCX, JPG, JPEG, and WEBP files are allowed.");
-    return;
-  }
+  if (!allowedTypes.includes(file.type))
+    return alert("Only PDF, DOCX, JPG, JPEG, WEBP allowed.");
 
-  if (file.size > maxFileSize) {
-    alert("Maximum file size allowed is 5 MB.");
-    return;
-  }
+  if (file.size > maxFileSize)
+    return alert("Maximum file size allowed is 5 MB.");
 
   const reader = new FileReader();
+
+  // Simulated progress bar
+  let percent = 0;
+  uploadProgress.style.width = "0%";
+  uploadProgress.style.backgroundColor = "#e91e63";
+  uploadProgress.textContent = "Uploading...";
+
+  const progressInterval = setInterval(() => {
+    percent += 5;
+    uploadProgress.style.width = percent + "%";
+    if (percent >= 95) clearInterval(progressInterval);
+  }, 100);
+
   reader.onload = function (e) {
     const dataUrl = e.target.result;
     const code = generateCode();
@@ -63,33 +68,25 @@ startUpload.addEventListener("click", () => {
       type: file.type,
       data: dataUrl,
       timestamp: Date.now()
+    }).then(() => {
+      clearInterval(progressInterval);
+      uploadProgress.style.width = "100%";
+      uploadProgress.textContent = "Uploaded!";
+      codeDisplay.textContent = code;
     });
-
-    uploadProgress.textContent = "Uploaded!";
-    codeDisplay.textContent = code;
-
-    // Auto-delete file after 5 minutes
-    setTimeout(() => {
-      database.ref("files/" + code).remove();
-    }, 5 * 60 * 1000);
   };
+
   reader.readAsDataURL(file);
 });
 
 // Download Handler
 startDownload.addEventListener("click", () => {
   const code = codeInput.value.trim();
-  if (!code) {
-    alert("Please enter the code.");
-    return;
-  }
+  if (!code) return alert("Please enter the code.");
 
   database.ref("files/" + code).once("value").then(snapshot => {
     const data = snapshot.val();
-    if (!data) {
-      alert("Invalid or expired code.");
-      return;
-    }
+    if (!data) return alert("Invalid or expired code.");
 
     const link = document.createElement("a");
     link.href = data.data;
