@@ -1,118 +1,90 @@
-const fileInput = document.getElementById("fileInput"); // example ID
-
-fileInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-
-  if (file.size > 5 * 1024 * 1024) { // 5MB = 5 * 1024 * 1024 bytes
-    alert("❌ File size exceeds 5MB limit. Please choose a smaller file.");
-    fileInput.value = ""; // Clear the input
-    return;
-  }
-
-// Replace with your Firebase config 👇
+// ✅ Firebase config (same as you provided)
 const firebaseConfig = {
-   apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
+  apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
   authDomain: "vh-temp-share.firebaseapp.com",
   databaseURL: "https://vh-temp-share-default-rtdb.firebaseio.com",
   projectId: "vh-temp-share",
-  storageBucket: "vh-temp-share.firebasestorage.app",
+  storageBucket: "vh-temp-share.appspot.com",
   messagingSenderId: "1080355432679",
   appId: "1:1080355432679:web:b7fe270d290346c448da42"
 };
 
+// ✅ Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const database = firebase.database();
 
-let localConnection, remoteConnection, fileReader;
-let fileChunkQueue = [];
-let dataChannel;
-const CHUNK_SIZE = 16 * 1024; // 16KB
-let generatedCode = "";
+// ✅ DOM Elements
+const fileInput = document.getElementById("fileInput");
+const startUpload = document.getElementById("startUpload");
+const uploadProgress = document.getElementById("uploadProgress");
+const codeDisplay = document.getElementById("codeDisplay");
+const codeInput = document.getElementById("codeInput");
+const startDownload = document.getElementById("startDownload");
 
+// ✅ Limit file size to 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+// ✅ Generate 5-digit random code
 function generateCode() {
   return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
-document.getElementById("startUpload").onclick = async () => {
-  const file = document.getElementById("fileInput").files[0];
-  if (!file) return alert("Please choose a file.");
-
-  generatedCode = generateCode();
-  document.getElementById("codeDisplay").innerText = generatedCode;
-
-  localConnection = new RTCPeerConnection();
-  dataChannel = localConnection.createDataChannel("file");
-  dataChannel.onopen = () => sendFile(file);
-  dataChannel.onerror = (e) => console.error("Channel error", e);
-
-  const offer = await localConnection.createOffer();
-  await localConnection.setLocalDescription(offer);
-
-  const ref = db.ref(`fileshare/${generatedCode}`);
-  await ref.set({ offer: offer });
-
-  ref.on("value", async (snap) => {
-    const data = snap.val();
-    if (data && data.answer && !localConnection.currentRemoteDescription) {
-      const answer = new RTCSessionDescription(data.answer);
-      await localConnection.setRemoteDescription(answer);
-    }
-  });
-};
-
-async function sendFile(file) {
-  const reader = new FileReader();
-  let offset = 0;
-
-  reader.onload = (e) => {
-    dataChannel.send(e.target.result);
-    offset += e.target.result.byteLength;
-    document.getElementById("uploadProgress").innerText = `Uploaded: ${Math.round((offset / file.size) * 100)}%`;
-
-    if (offset < file.size) readSlice(offset);
-    else dataChannel.send("EOF");
-  };
-
-  function readSlice(o) {
-    const slice = file.slice(offset, o + CHUNK_SIZE);
-    reader.readAsArrayBuffer(slice);
+// ✅ Upload handler
+startUpload.addEventListener("click", async () => {
+  const file = fileInput.files[0];
+  if (!file) return alert("Please select a file.");
+  if (file.size > MAX_FILE_SIZE) {
+    alert("File size must be less than 5MB.");
+    return;
   }
 
-  readSlice(0);
-}
+  const reader = new FileReader();
+  const code = generateCode();
 
-document.getElementById("startDownload").onclick = async () => {
-  const code = document.getElementById("codeInput").value;
-  if (!code) return alert("Enter valid code.");
+  reader.onload = function (e) {
+    const fileData = e.target.result;
 
-  remoteConnection = new RTCPeerConnection();
-  remoteConnection.ondatachannel = (event) => {
-    const receiveChannel = event.channel;
-    const receivedBuffers = [];
-
-    receiveChannel.onmessage = (e) => {
-      if (e.data === "EOF") {
-        const blob = new Blob(receivedBuffers);
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "downloaded_file";
-        a.click();
-      } else {
-        receivedBuffers.push(e.data);
-      }
-    };
+    uploadProgress.textContent = "Uploading...";
+    database.ref("files/" + code).set({
+      name: file.name,
+      type: file.type,
+      data: fileData,
+      createdAt: Date.now()
+    }).then(() => {
+      uploadProgress.textContent = "Upload complete.";
+      codeDisplay.textContent = code;
+    }).catch((error) => {
+      uploadProgress.textContent = "Upload failed.";
+      console.error(error);
+    });
   };
 
-  const ref = db.ref(`fileshare/${code}`);
-  const snap = await ref.once("value");
-  const data = snap.val();
+  reader.readAsDataURL(file);
+});
 
-  if (!data) return alert("Invalid or expired code.");
+// ✅ Download handler
+startDownload.addEventListener("click", () => {
+  const code = codeInput.value.trim();
+  if (code.length !== 5) return alert("Enter a valid 5-digit code.");
 
-  const offerDesc = new RTCSessionDescription(data.offer);
-  await remoteConnection.setRemoteDescription(offerDesc);
-  const answer = await remoteConnection.createAnswer();
-  await remoteConnection.setLocalDescription(answer);
+  uploadProgress.textContent = "Fetching file...";
+  database.ref("files/" + code).once("value").then((snapshot) => {
+    const data = snapshot.val();
+    if (!data) {
+      uploadProgress.textContent = "No file found for this code.";
+      return;
+    }
 
-  await ref.update({ answer: answer });
-};
+    const a = document.createElement("a");
+    a.href = data.data;
+    a.download = data.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    uploadProgress.textContent = "Download started.";
+  }).catch((error) => {
+    uploadProgress.textContent = "Download failed.";
+    console.error(error);
+  });
+});
