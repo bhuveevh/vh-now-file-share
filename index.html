@@ -2,31 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>vH Now File Share</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h2 style="text-align: center;">vH Now File Share</h2>
+    <h2 class="title">vH Now File Share</h2>
 
     <div class="widget">
+      <!-- Upload Section -->
       <div class="section" id="upload-section">
         <h3>Upload File</h3>
         <input type="file" id="fileInput" />
         <button id="startUpload">Generate Code</button>
-        <div id="uploadProgress" class="progress-bar"></div>
-        <p><strong>Code:</strong></p>
+        <div class="progress-bar"><div id="uploadProgress"></div></div>
         <div id="codeBox"><span id="codeDisplay">---</span></div>
       </div>
 
       <hr />
 
+      <!-- Download Section -->
       <div class="section" id="download-section">
         <h3>Download File</h3>
         <input type="text" id="codeInput" placeholder="Enter 5-digit code" />
         <button id="startDownload">Download</button>
-        <div id="downloadStatus"></div>
+        <p id="downloadStatus"></p>
       </div>
     </div>
 
@@ -35,11 +36,11 @@
     </footer>
   </div>
 
-  <!-- ✅ Firebase Scripts: Correct UMD/Compat versions -->
+  <!-- Firebase Scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-  <!-- Your Script -->
+  <!-- App Script -->
   <script src="script.js"></script>
 </body>
 </html>
