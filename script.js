@@ -1,4 +1,4 @@
-// Initialize Firebase
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
   authDomain: "vh-temp-share.firebaseapp.com",
@@ -12,108 +12,98 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Utility: Generate 5-digit code
-function generateCode() {
-  return Math.floor(10000 + Math.random() * 90000).toString();
-}
-
-// DOM Elements
+// DOM elements
 const fileInput = document.getElementById("fileInput");
-const uploadBtn = document.getElementById("startUpload");
-const downloadBtn = document.getElementById("startDownload");
+const startUpload = document.getElementById("startUpload");
 const codeDisplay = document.getElementById("codeDisplay");
-const codeInput = document.getElementById("codeInput");
-const progressBar = document.getElementById("uploadProgress");
+const uploadProgress = document.getElementById("uploadProgress");
+const progressBar = document.createElement("div");
 
-// Upload Handler
-uploadBtn.addEventListener("click", () => {
+uploadProgress.appendChild(progressBar);
+progressBar.style.height = "8px";
+progressBar.style.width = "0%";
+progressBar.style.background = "deeppink";
+progressBar.style.borderRadius = "5px";
+progressBar.style.transition = "width 0.3s ease";
+
+// Allowed file types
+const allowedTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+startUpload.addEventListener("click", () => {
   const file = fileInput.files[0];
-  if (!file) return alert("Please select a file.");
+  if (!file) return alert("Please select a file first.");
 
-  const allowedTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/jpg", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
-    return alert("Only PDF, PNG, DOCX, JPG, JPEG, and WEBP files are allowed.");
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    return alert("File size must be less than 5MB.");
-  }
+  // Validation
+  if (file.size > 5 * 1024 * 1024) return alert("Max file size is 5 MB.");
+  if (!allowedTypes.includes(file.type)) return alert("File type not supported.");
 
   const reader = new FileReader();
-  const code = generateCode();
-
   reader.onload = function (e) {
-    const fileData = {
+    const fileData = e.target.result;
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+
+    const uploadRef = db.ref("files/" + code);
+    const timestamp = Date.now();
+
+    // Upload with progress simulation
+    let progress = 0;
+    const fakeProgress = setInterval(() => {
+      progress += 10;
+      if (progress <= 100) {
+        progressBar.style.width = progress + "%";
+      }
+      if (progress >= 100) {
+        clearInterval(fakeProgress);
+      }
+    }, 100);
+
+    uploadRef.set({
       name: file.name,
       type: file.type,
-      content: e.target.result,
-      timestamp: Date.now()
-    };
-
-    const uploadTask = db.ref("files/" + code).set(fileData, (error) => {
-      if (error) {
-        alert("Upload failed.");
-      } else {
-        codeDisplay.textContent = code;
-        progressBar.style.width = "100%";
-        progressBar.style.backgroundColor = "#e91e63";
-
-        // Auto-delete after 5 minutes
-        setTimeout(() => {
-          db.ref("files/" + code).remove();
-        }, 300000);
-      }
+      data: fileData,
+      timestamp: timestamp
+    }).then(() => {
+      codeDisplay.textContent = code;
+      // Auto-delete after 5 minutes
+      setTimeout(() => {
+        db.ref("files/" + code).remove();
+      }, 5 * 60 * 1000);
+    }).catch(() => {
+      alert("Failed to upload file.");
     });
   };
-
-  // Reset progress bar
-  progressBar.style.transition = "none";
-  progressBar.style.width = "0";
-  progressBar.offsetHeight; // Trigger reflow
-  progressBar.style.transition = "width 1.5s ease";
-
-  // Simulate smooth progress fill
-  let percent = 0;
-  const interval = setInterval(() => {
-    percent += 10;
-    progressBar.style.width = percent + "%";
-    if (percent >= 90) clearInterval(interval);
-  }, 150);
 
   reader.readAsDataURL(file);
 });
 
-// Download Handler
-downloadBtn.addEventListener("click", async () => {
-  const code = codeInput.value.trim();
-  if (code.length !== 5) return alert("Please enter a valid 5-digit code.");
 
-  downloadBtn.textContent = "⌛ Downloading...";
-  downloadBtn.disabled = true;
+// Download Logic
+document.getElementById("startDownload").addEventListener("click", () => {
+  const code = document.getElementById("codeInput").value.trim();
+  if (code.length !== 5) return alert("Enter a valid 5-digit code");
 
-  try {
-    const snapshot = await db.ref("files/" + code).once("value");
+  const downloadButton = document.getElementById("startDownload");
+  downloadButton.textContent = "Downloading...";
+  downloadButton.disabled = true;
 
-    if (!snapshot.exists()) throw new Error("Code expired or not found.");
+  db.ref("files/" + code).once("value")
+    .then(snapshot => {
+      const fileObj = snapshot.val();
+      if (!fileObj) throw new Error("File expired or doesn't exist.");
 
-    const fileData = snapshot.val();
-    const currentTime = Date.now();
+      const link = document.createElement("a");
+      link.href = fileObj.data;
+      link.download = fileObj.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
 
-    if (currentTime > fileData.timestamp + 300000) {
-      await db.ref("files/" + code).remove();
-      throw new Error("Code expired.");
-    }
-
-    const a = document.createElement("a");
-    a.href = fileData.content;
-    a.download = fileData.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    downloadBtn.textContent = "Download";
-    downloadBtn.disabled = false;
-  }
+      downloadButton.textContent = "Download";
+      downloadButton.disabled = false;
+    })
+    .catch(err => {
+      alert("Download failed: " + err.message);
+      downloadButton.textContent = "Download";
+      downloadButton.disabled = false;
+    });
 });
