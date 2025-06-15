@@ -1,109 +1,96 @@
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
+document.addEventListener("DOMContentLoaded", function () {
+  // DOM Elements
+  const fileInput = document.getElementById("fileInput");
+  const startUpload = document.getElementById("startUpload");
+  const uploadProgress = document.getElementById("uploadProgress");
+  const codeDisplay = document.getElementById("codeDisplay");
+
+  const codeInput = document.getElementById("codeInput");
+  const startDownload = document.getElementById("startDownload");
+  const downloadStatus = document.getElementById("downloadStatus");
+
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
   authDomain: "vh-temp-share.firebaseapp.com",
   databaseURL: "https://vh-temp-share-default-rtdb.firebaseio.com",
   projectId: "vh-temp-share",
   storageBucket: "vh-temp-share.firebasestorage.app",
   messagingSenderId: "1080355432679",
   appId: "1:1080355432679:web:b7fe270d290346c448da42"
-};
+  };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-// DOM elements
-const fileInput = document.getElementById("fileInput");
-const startUpload = document.getElementById("startUpload");
-const codeDisplay = document.getElementById("codeDisplay");
-const uploadProgress = document.getElementById("uploadProgress");
-const progressBar = document.createElement("div");
+  // Generate 5-digit code
+  function generateCode() {
+    return Math.floor(10000 + Math.random() * 90000).toString();
+  }
 
-uploadProgress.appendChild(progressBar);
-progressBar.style.height = "8px";
-progressBar.style.width = "0%";
-progressBar.style.background = "deeppink";
-progressBar.style.borderRadius = "5px";
-progressBar.style.transition = "width 0.3s ease";
+  // Upload Handler
+  startUpload.addEventListener("click", () => {
+    const file = fileInput.files[0];
+    if (!file) return alert("Please select a file!");
+    if (file.size > 5 * 1024 * 1024) return alert("File size must be <= 5MB");
 
-// Allowed file types
-const allowedTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
 
-startUpload.addEventListener("click", () => {
-  const file = fileInput.files[0];
-  if (!file) return alert("Please select a file first.");
+    reader.onload = () => {
+      const fileData = reader.result;
+      const code = generateCode();
 
-  // Validation
-  if (file.size > 5 * 1024 * 1024) return alert("Max file size is 5 MB.");
-  if (!allowedTypes.includes(file.type)) return alert("File type not supported.");
+      // Upload with simulated progress
+      let progress = 0;
+      uploadProgress.style.width = "0%";
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const fileData = e.target.result;
-    const code = Math.floor(10000 + Math.random() * 90000).toString();
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        uploadProgress.style.width = progress + "%";
+        if (progress >= 100) clearInterval(progressInterval);
+      }, 100);
 
-    const uploadRef = db.ref("files/" + code);
-    const timestamp = Date.now();
+      db.ref("files/" + code).set({
+        name: file.name,
+        data: fileData,
+        createdAt: Date.now()
+      });
 
-    // Upload with progress simulation
-    let progress = 0;
-    const fakeProgress = setInterval(() => {
-      progress += 10;
-      if (progress <= 100) {
-        progressBar.style.width = progress + "%";
-      }
-      if (progress >= 100) {
-        clearInterval(fakeProgress);
-      }
-    }, 100);
-
-    uploadRef.set({
-      name: file.name,
-      type: file.type,
-      data: fileData,
-      timestamp: timestamp
-    }).then(() => {
-      codeDisplay.textContent = code;
       // Auto-delete after 5 minutes
       setTimeout(() => {
         db.ref("files/" + code).remove();
       }, 5 * 60 * 1000);
-    }).catch(() => {
-      alert("Failed to upload file.");
-    });
-  };
 
-  reader.readAsDataURL(file);
-});
+      codeDisplay.textContent = code;
+    };
+  });
 
+  // Download Handler
+  startDownload.addEventListener("click", async () => {
+    const code = codeInput.value.trim();
+    if (!code) return alert("Enter 5-digit code");
 
-// Download Logic
-document.getElementById("startDownload").addEventListener("click", () => {
-  const code = document.getElementById("codeInput").value.trim();
-  if (code.length !== 5) return alert("Enter a valid 5-digit code");
+    startDownload.disabled = true;
+    startDownload.textContent = "⏳ Downloading...";
 
-  const downloadButton = document.getElementById("startDownload");
-  downloadButton.textContent = "Downloading...";
-  downloadButton.disabled = true;
+    const snapshot = await db.ref("files/" + code).once("value");
+    const file = snapshot.val();
 
-  db.ref("files/" + code).once("value")
-    .then(snapshot => {
-      const fileObj = snapshot.val();
-      if (!fileObj) throw new Error("File expired or doesn't exist.");
+    if (!file) {
+      downloadStatus.textContent = "❌ File not found or expired.";
+      startDownload.disabled = false;
+      startDownload.textContent = "Download";
+      return;
+    }
 
-      const link = document.createElement("a");
-      link.href = fileObj.data;
-      link.download = fileObj.name;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+    const a = document.createElement("a");
+    a.href = file.data;
+    a.download = file.name;
+    a.click();
 
-      downloadButton.textContent = "Download";
-      downloadButton.disabled = false;
-    })
-    .catch(err => {
-      alert("Download failed: " + err.message);
-      downloadButton.textContent = "Download";
-      downloadButton.disabled = false;
-    });
+    downloadStatus.textContent = "✅ Download complete.";
+    startDownload.disabled = false;
+    startDownload.textContent = "Download";
+  });
 });
