@@ -20,8 +20,15 @@ const codeDisplay = document.getElementById("codeDisplay");
 const codeInput = document.getElementById("codeInput");
 const startDownload = document.getElementById("startDownload");
 
-// Valid Extensions
-const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/jpg', 'image/webp'];
+// Valid Extensions & Size Limit
+const allowedTypes = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp'
+];
+const maxFileSize = 5 * 1024 * 1024; // 5 MB in bytes
 
 function generateCode() {
   return Math.floor(10000 + Math.random() * 90000).toString();
@@ -40,6 +47,11 @@ startUpload.addEventListener("click", () => {
     return;
   }
 
+  if (file.size > maxFileSize) {
+    alert("Maximum file size allowed is 5 MB.");
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = function (e) {
     const dataUrl = e.target.result;
@@ -55,7 +67,7 @@ startUpload.addEventListener("click", () => {
     uploadProgress.textContent = "Uploaded!";
     codeDisplay.textContent = code;
 
-    // Set timeout to auto-delete after 5 mins
+    // Auto-delete file after 5 minutes
     setTimeout(() => {
       database.ref("files/" + code).remove();
     }, 5 * 60 * 1000);
