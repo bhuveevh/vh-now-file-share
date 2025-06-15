@@ -1,4 +1,4 @@
-/* Reset & Base Styles */
+/* Basic Reset */
 * {
   margin: 0;
   padding: 0;
@@ -6,129 +6,100 @@
 }
 
 body {
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background-color: #f3f3f5;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
   color: #333;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   padding: 20px;
 }
 
+/* Container */
 .container {
-  width: 100%;
   max-width: 500px;
-  background-color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  padding: 30px;
-  border: 1px solid #e0e0e0;
+  margin: auto;
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Title */
 .title {
   text-align: center;
-  margin-bottom: 25px;
   font-size: 24px;
-  font-weight: 600;
-  color: #222;
+  margin-bottom: 20px;
 }
 
 /* Widget */
-.widget {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.section h3 {
-  margin-bottom: 10px;
-  font-size: 18px;
-  color: #444;
+.widget .section {
+  margin-bottom: 20px;
 }
 
 input[type="file"],
 input[type="text"] {
   width: 100%;
   padding: 10px;
-  font-size: 15px;
+  margin-top: 8px;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  border-radius: 6px;
 }
 
 button {
-  background-color: #0066ff;
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #007aff;
   color: white;
   border: none;
-  padding: 10px 15px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 15px;
   transition: background 0.3s ease;
 }
 
+button:disabled {
+  background-color: #aaa;
+}
+
 button:hover {
-  background-color: #004ccf;
+  background-color: #005ecb;
 }
 
-/* Upload Progress Bar */
-#uploadProgressBar {
+/* Progress Bar */
+.progress-bar {
+  background: #eee;
+  border-radius: 8px;
+  height: 10px;
   width: 100%;
-  height: 8px;
-  background-color: #f1cbe9;
-  border-radius: 5px;
+  margin-top: 10px;
   overflow: hidden;
-  margin-top: 8px;
-  margin-bottom: 10px;
 }
 
-#progressFill {
+#uploadProgress {
   height: 100%;
   width: 0%;
-  background-color: #e91e63;
+  background-color: deeppink;
   transition: width 0.3s ease;
 }
 
-/* Code Display Box */
-#codeDisplayBox {
-  background-color: #f5f5f5;
-  padding: 12px;
-  border: 2px dashed #888;
-  border-radius: 8px;
-  font-size: 18px;
+/* Code Box */
+#codeBox {
+  background-color: #f0f8ff;
+  color: #007aff;
+  padding: 10px;
+  margin-top: 10px;
+  font-size: 20px;
   text-align: center;
-  color: #e91e63;
   font-weight: bold;
+  border-radius: 6px;
+  border: 1px dashed #007aff;
 }
 
 /* Footer */
 footer {
   text-align: center;
-  font-size: 13px;
-  margin-top: 25px;
-  color: #777;
+  font-size: 12px;
+  margin-top: 20px;
 }
 
 footer a {
-  color: #0066ff;
+  color: #007aff;
   text-decoration: none;
-}
-
-/* Download Button Animation */
-.pulse {
-  animation: pulseAnim 2s infinite;
-}
-
-@keyframes pulseAnim {
-  0% {
-    box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.6);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(0, 102, 255, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(0, 102, 255, 0);
-  }
 }
