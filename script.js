@@ -1,96 +1,86 @@
-document.addEventListener("DOMContentLoaded", function () {
-  // DOM Elements
-  const fileInput = document.getElementById("fileInput");
-  const startUpload = document.getElementById("startUpload");
-  const uploadProgress = document.getElementById("uploadProgress");
-  const codeDisplay = document.getElementById("codeDisplay");
-
-  const codeInput = document.getElementById("codeInput");
-  const startDownload = document.getElementById("startDownload");
-  const downloadStatus = document.getElementById("downloadStatus");
-
-  // Firebase Config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
   authDomain: "vh-temp-share.firebaseapp.com",
   databaseURL: "https://vh-temp-share-default-rtdb.firebaseio.com",
   projectId: "vh-temp-share",
   storageBucket: "vh-temp-share.firebasestorage.app",
   messagingSenderId: "1080355432679",
   appId: "1:1080355432679:web:b7fe270d290346c448da42"
-  };
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+// DOM Elements
+const fileInput = document.getElementById("fileInput");
+const startUpload = document.getElementById("startUpload");
+const uploadProgress = document.getElementById("uploadProgress");
+const codeDisplay = document.getElementById("codeDisplay");
 
-  // Generate 5-digit code
-  function generateCode() {
-    return Math.floor(10000 + Math.random() * 90000).toString();
+const codeInput = document.getElementById("codeInput");
+const startDownload = document.getElementById("startDownload");
+
+// Valid Extensions
+const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/jpg', 'image/webp'];
+
+function generateCode() {
+  return Math.floor(10000 + Math.random() * 90000).toString();
+}
+
+// Upload Handler
+startUpload.addEventListener("click", () => {
+  const file = fileInput.files[0];
+  if (!file) {
+    alert("Please select a file.");
+    return;
   }
 
-  // Upload Handler
-  startUpload.addEventListener("click", () => {
-    const file = fileInput.files[0];
-    if (!file) return alert("Please select a file!");
-    if (file.size > 5 * 1024 * 1024) return alert("File size must be <= 5MB");
+  if (!allowedTypes.includes(file.type)) {
+    alert("Only PDF, DOCX, JPG, JPEG, and WEBP files are allowed.");
+    return;
+  }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const dataUrl = e.target.result;
+    const code = generateCode();
 
-    reader.onload = () => {
-      const fileData = reader.result;
-      const code = generateCode();
+    database.ref("files/" + code).set({
+      name: file.name,
+      type: file.type,
+      data: dataUrl,
+      timestamp: Date.now()
+    });
 
-      // Upload with simulated progress
-      let progress = 0;
-      uploadProgress.style.width = "0%";
+    uploadProgress.textContent = "Uploaded!";
+    codeDisplay.textContent = code;
 
-      const progressInterval = setInterval(() => {
-        progress += 10;
-        uploadProgress.style.width = progress + "%";
-        if (progress >= 100) clearInterval(progressInterval);
-      }, 100);
+    // Set timeout to auto-delete after 5 mins
+    setTimeout(() => {
+      database.ref("files/" + code).remove();
+    }, 5 * 60 * 1000);
+  };
+  reader.readAsDataURL(file);
+});
 
-      db.ref("files/" + code).set({
-        name: file.name,
-        data: fileData,
-        createdAt: Date.now()
-      });
+// Download Handler
+startDownload.addEventListener("click", () => {
+  const code = codeInput.value.trim();
+  if (!code) {
+    alert("Please enter the code.");
+    return;
+  }
 
-      // Auto-delete after 5 minutes
-      setTimeout(() => {
-        db.ref("files/" + code).remove();
-      }, 5 * 60 * 1000);
-
-      codeDisplay.textContent = code;
-    };
-  });
-
-  // Download Handler
-  startDownload.addEventListener("click", async () => {
-    const code = codeInput.value.trim();
-    if (!code) return alert("Enter 5-digit code");
-
-    startDownload.disabled = true;
-    startDownload.textContent = "⏳ Downloading...";
-
-    const snapshot = await db.ref("files/" + code).once("value");
-    const file = snapshot.val();
-
-    if (!file) {
-      downloadStatus.textContent = "❌ File not found or expired.";
-      startDownload.disabled = false;
-      startDownload.textContent = "Download";
+  database.ref("files/" + code).once("value").then(snapshot => {
+    const data = snapshot.val();
+    if (!data) {
+      alert("Invalid or expired code.");
       return;
     }
 
-    const a = document.createElement("a");
-    a.href = file.data;
-    a.download = file.name;
-    a.click();
-
-    downloadStatus.textContent = "✅ Download complete.";
-    startDownload.disabled = false;
-    startDownload.textContent = "Download";
+    const link = document.createElement("a");
+    link.href = data.data;
+    link.download = data.name;
+    link.click();
   });
 });
