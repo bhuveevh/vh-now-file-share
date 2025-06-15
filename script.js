@@ -1,4 +1,4 @@
-// Firebase Config
+// Initialize Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
   authDomain: "vh-temp-share.firebaseapp.com",
@@ -8,89 +8,112 @@ const firebaseConfig = {
   messagingSenderId: "1080355432679",
   appId: "1:1080355432679:web:b7fe270d290346c448da42"
 };
+
 firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+const db = firebase.database();
 
-// DOM Elements
-const fileInput = document.getElementById("fileInput");
-const startUpload = document.getElementById("startUpload");
-const uploadProgress = document.getElementById("uploadProgress");
-const codeDisplay = document.getElementById("codeDisplay");
-
-const codeInput = document.getElementById("codeInput");
-const startDownload = document.getElementById("startDownload");
-
-const allowedTypes = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/png',
-  'image/jpg',
-  'image/webp'
-];
-const maxFileSize = 5 * 1024 * 1024;
-
+// Utility: Generate 5-digit code
 function generateCode() {
   return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
+// DOM Elements
+const fileInput = document.getElementById("fileInput");
+const uploadBtn = document.getElementById("startUpload");
+const downloadBtn = document.getElementById("startDownload");
+const codeDisplay = document.getElementById("codeDisplay");
+const codeInput = document.getElementById("codeInput");
+const progressBar = document.getElementById("uploadProgress");
+
 // Upload Handler
-startUpload.addEventListener("click", () => {
+uploadBtn.addEventListener("click", () => {
   const file = fileInput.files[0];
   if (!file) return alert("Please select a file.");
 
-  if (!allowedTypes.includes(file.type))
-    return alert("Only PDF, DOCX, JPG, JPEG, WEBP allowed.");
+  const allowedTypes = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/jpg", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    return alert("Only PDF, PNG, DOCX, JPG, JPEG, and WEBP files are allowed.");
+  }
 
-  if (file.size > maxFileSize)
-    return alert("Maximum file size allowed is 5 MB.");
+  if (file.size > 5 * 1024 * 1024) {
+    return alert("File size must be less than 5MB.");
+  }
 
   const reader = new FileReader();
-
-  // Simulated progress bar
-  let percent = 0;
-  uploadProgress.style.width = "0%";
-  uploadProgress.style.backgroundColor = "#e91e63";
-  uploadProgress.textContent = "Uploading...";
-
-  const progressInterval = setInterval(() => {
-    percent += 5;
-    uploadProgress.style.width = percent + "%";
-    if (percent >= 95) clearInterval(progressInterval);
-  }, 100);
+  const code = generateCode();
 
   reader.onload = function (e) {
-    const dataUrl = e.target.result;
-    const code = generateCode();
-
-    database.ref("files/" + code).set({
+    const fileData = {
       name: file.name,
       type: file.type,
-      data: dataUrl,
+      content: e.target.result,
       timestamp: Date.now()
-    }).then(() => {
-      clearInterval(progressInterval);
-      uploadProgress.style.width = "100%";
-      uploadProgress.textContent = "Uploaded!";
-      codeDisplay.textContent = code;
+    };
+
+    const uploadTask = db.ref("files/" + code).set(fileData, (error) => {
+      if (error) {
+        alert("Upload failed.");
+      } else {
+        codeDisplay.textContent = code;
+        progressBar.style.width = "100%";
+        progressBar.style.backgroundColor = "#e91e63";
+
+        // Auto-delete after 5 minutes
+        setTimeout(() => {
+          db.ref("files/" + code).remove();
+        }, 300000);
+      }
     });
   };
+
+  // Reset progress bar
+  progressBar.style.transition = "none";
+  progressBar.style.width = "0";
+  progressBar.offsetHeight; // Trigger reflow
+  progressBar.style.transition = "width 1.5s ease";
+
+  // Simulate smooth progress fill
+  let percent = 0;
+  const interval = setInterval(() => {
+    percent += 10;
+    progressBar.style.width = percent + "%";
+    if (percent >= 90) clearInterval(interval);
+  }, 150);
 
   reader.readAsDataURL(file);
 });
 
 // Download Handler
-startDownload.addEventListener("click", () => {
+downloadBtn.addEventListener("click", async () => {
   const code = codeInput.value.trim();
-  if (!code) return alert("Please enter the code.");
+  if (code.length !== 5) return alert("Please enter a valid 5-digit code.");
 
-  database.ref("files/" + code).once("value").then(snapshot => {
-    const data = snapshot.val();
-    if (!data) return alert("Invalid or expired code.");
+  downloadBtn.textContent = "⌛ Downloading...";
+  downloadBtn.disabled = true;
 
-    const link = document.createElement("a");
-    link.href = data.data;
-    link.download = data.name;
-    link.click();
-  });
+  try {
+    const snapshot = await db.ref("files/" + code).once("value");
+
+    if (!snapshot.exists()) throw new Error("Code expired or not found.");
+
+    const fileData = snapshot.val();
+    const currentTime = Date.now();
+
+    if (currentTime > fileData.timestamp + 300000) {
+      await db.ref("files/" + code).remove();
+      throw new Error("Code expired.");
+    }
+
+    const a = document.createElement("a");
+    a.href = fileData.content;
+    a.download = fileData.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    downloadBtn.textContent = "Download";
+    downloadBtn.disabled = false;
+  }
 });
