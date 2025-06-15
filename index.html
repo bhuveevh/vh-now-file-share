@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vH Now File Share</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>vH Now File Share</h2>
+
+    <div class="widget">
+      <div class="section" id="upload-section">
+        <h3>Upload File</h3>
+        <input type="file" id="fileInput" />
+        <button id="startUpload">Generate Code</button>
+        <p id="uploadProgress"></p>
+        <p><strong>Code:</strong> <span id="codeDisplay">---</span></p>
+      </div>
+
+      <hr />
+
+      <div class="section" id="download-section">
+        <h3>Download File</h3>
+        <input type="text" id="codeInput" placeholder="Enter 5-digit code" />
+        <button id="startDownload">Download</button>
+      </div>
+    </div>
+
+    <footer>
+      Developed by <a href="https://vacancyhai.online" target="_blank">VACANCYHAI.ONLINE</a> | Inspired by USERS
+    </footer>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+
+  <!-- Your Script -->
+  <script src="script.js"></script>
+</body>
+</html>
