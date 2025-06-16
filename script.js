@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const startDownload = document.getElementById("startDownload");
   const downloadStatus = document.getElementById("downloadStatus");
 
-  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
     authDomain: "vh-temp-share.firebaseapp.com",
@@ -34,7 +33,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return Math.floor(10000 + Math.random() * 90000).toString();
   }
 
-  // 📤 Upload File
   startUpload.addEventListener("click", () => {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file!");
@@ -44,7 +42,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const reader = new FileReader();
     reader.readAsDataURL(file);
 
-    // UI Reset
     uploadProgress.style.width = "0%";
     codeDisplay.textContent = "⏳ Uploading...";
 
@@ -52,23 +49,25 @@ document.addEventListener("DOMContentLoaded", function () {
       const fileData = reader.result;
       const code = generateCode();
 
-      // Start progress fill after Firebase save starts
+      // Simulate progress until Firebase finishes
       let progress = 0;
       const progressInterval = setInterval(() => {
-        progress += 10;
-        uploadProgress.style.width = `${progress}%`;
-        if (progress >= 100) clearInterval(progressInterval);
-      }, 100);
+        if (progress < 95) {
+          progress += 5;
+          uploadProgress.style.width = `${progress}%`;
+        }
+      }, 150); // slow fill to sync with db write
 
       db.ref("files/" + code).set({
         name: file.name,
         data: fileData,
         createdAt: Date.now()
       }).then(() => {
-        // ✅ Show code after Firebase has saved it
+        clearInterval(progressInterval);
+        uploadProgress.style.width = "100%";
+
         codeDisplay.textContent = code;
 
-        // 🗑️ Auto delete after 5 min
         setTimeout(() => {
           db.ref("files/" + code).remove();
         }, 5 * 60 * 1000);
@@ -81,7 +80,6 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   });
 
-  // ⬇️ Download File
   startDownload.addEventListener("click", async () => {
     const code = codeInput.value.trim();
     if (!code || code.length !== 5) return alert("Please enter a 5-digit code.");
