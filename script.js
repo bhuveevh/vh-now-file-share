@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/jpeg',
+    'image/png',
     'image/jpg',
     'image/webp'
   ];
@@ -37,13 +38,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file!");
     if (file.size > 5 * 1024 * 1024) return alert("File must be 5MB or less.");
-    if (!allowedTypes.includes(file.type)) return alert("Only PDF, DOCX, JPG, JPEG, WEBP files allowed.");
+    if (!allowedTypes.includes(file.type)) return alert("Only PDF, DOCX, PNG, JPG, JPEG, WEBP files allowed.");
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
 
     uploadProgress.style.width = "0%";
-    codeDisplay.textContent = "⬆ Uploading...";
+    codeDisplay.textContent = "🢙 Uploading...";
 
     reader.onload = () => {
       const fileData = reader.result;
@@ -85,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!code || code.length !== 5) return alert("Please enter a 5-digit code.");
 
     startDownload.disabled = true;
-    startDownload.textContent = "⬇ Downloading...";
+    startDownload.textContent = "🢛 Downloading...";
     downloadStatus.textContent = "";
 
     try {
