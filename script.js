@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const startDownload = document.getElementById("startDownload");
   const downloadStatus = document.getElementById("downloadStatus");
 
-  // Firebase Config
+  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
     authDomain: "vh-temp-share.firebaseapp.com",
@@ -22,10 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  function generateCode() {
-    return Math.floor(10000 + Math.random() * 90000).toString();
-  }
-
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -34,56 +30,61 @@ document.addEventListener("DOMContentLoaded", function () {
     'image/webp'
   ];
 
-  // Upload File
+  function generateCode() {
+    return Math.floor(10000 + Math.random() * 90000).toString();
+  }
+
+  // 📤 Upload File
   startUpload.addEventListener("click", () => {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file!");
-    if (file.size > 5 * 1024 * 1024) return alert("File size must be 5MB or less.");
-    if (!allowedTypes.includes(file.type)) return alert("Only PDF, DOCX, JPG, JPEG, WEBP files are allowed.");
+    if (file.size > 5 * 1024 * 1024) return alert("File must be 5MB or less.");
+    if (!allowedTypes.includes(file.type)) return alert("Only PDF, DOCX, JPG, JPEG, WEBP files allowed.");
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
 
-    codeDisplay.textContent = "⏳ Generating...";
+    // UI Reset
     uploadProgress.style.width = "0%";
+    codeDisplay.textContent = "⏳ Uploading...";
 
     reader.onload = () => {
       const fileData = reader.result;
       const code = generateCode();
+
+      // Start progress fill after Firebase save starts
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        uploadProgress.style.width = `${progress}%`;
+        if (progress >= 100) clearInterval(progressInterval);
+      }, 100);
 
       db.ref("files/" + code).set({
         name: file.name,
         data: fileData,
         createdAt: Date.now()
       }).then(() => {
-        // ✅ Only now show the code
+        // ✅ Show code after Firebase has saved it
         codeDisplay.textContent = code;
 
-        // ✅ Fill progress bar smoothly after upload
-        let width = 0;
-        const interval = setInterval(() => {
-          width += 10;
-          uploadProgress.style.width = `${width}%`;
-          if (width >= 100) clearInterval(interval);
-        }, 50);
-
-        // 🗑️ Auto-delete after 5 mins
+        // 🗑️ Auto delete after 5 min
         setTimeout(() => {
           db.ref("files/" + code).remove();
         }, 5 * 60 * 1000);
       }).catch(err => {
+        clearInterval(progressInterval);
+        uploadProgress.style.width = "0%";
         codeDisplay.textContent = "❌ Upload failed";
-        alert("Upload Error: " + err.message);
+        alert("Upload error: " + err.message);
       });
     };
   });
 
-  // Download File
+  // ⬇️ Download File
   startDownload.addEventListener("click", async () => {
     const code = codeInput.value.trim();
-    if (!code || code.length !== 5) {
-      return alert("Please enter a valid 5-digit code.");
-    }
+    if (!code || code.length !== 5) return alert("Please enter a 5-digit code.");
 
     startDownload.disabled = true;
     startDownload.textContent = "⏳ Downloading...";
