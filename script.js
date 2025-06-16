@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
     reader.readAsDataURL(file);
 
     uploadProgress.style.width = "0%";
-    codeDisplay.textContent = "⏳ Uploading...";
+    codeDisplay.textContent = "⬆ Uploading...";
 
     reader.onload = () => {
       const fileData = reader.result;
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!code || code.length !== 5) return alert("Please enter a 5-digit code.");
 
     startDownload.disabled = true;
-    startDownload.textContent = "⏳ Downloading...";
+    startDownload.textContent = "⬇ Downloading...";
     downloadStatus.textContent = "";
 
     try {
