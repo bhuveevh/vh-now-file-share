@@ -9,13 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const downloadStatus = document.getElementById("downloadStatus");
 
   const firebaseConfig = {
-    apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
-    authDomain: "vh-temp-share.firebaseapp.com",
     databaseURL: "https://vh-temp-share-default-rtdb.firebaseio.com",
-    projectId: "vh-temp-share",
-    storageBucket: "vh-temp-share.appspot.com",
-    messagingSenderId: "1080355432679",
-    appId: "1:1080355432679:web:b7fe270d290346c448da42"
   };
 
   firebase.initializeApp(firebaseConfig);
