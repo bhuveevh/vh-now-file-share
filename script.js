@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const startDownload = document.getElementById("startDownload");
   const downloadStatus = document.getElementById("downloadStatus");
 
-  // ✅ Firebase config
+  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyAbOFkjLoMWsjvXtAZNulO2LrAX1uDjHfk",
     authDomain: "vh-temp-share.firebaseapp.com",
@@ -22,15 +22,19 @@ document.addEventListener("DOMContentLoaded", function () {
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // 🔢 Generate 5-digit code
   function generateCode() {
     return Math.floor(10000 + Math.random() * 90000).toString();
   }
 
-  // 🎯 Allowed file types
-  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/jpg', 'image/webp'];
+  const allowedTypes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp'
+  ];
 
-  // 📤 Upload File
+  // Upload File
   startUpload.addEventListener("click", () => {
     const file = fileInput.files[0];
     if (!file) return alert("Please select a file!");
@@ -47,20 +51,21 @@ document.addEventListener("DOMContentLoaded", function () {
       const fileData = reader.result;
       const code = generateCode();
 
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        uploadProgress.style.width = `${progress}%`;
-        if (progress >= 100) clearInterval(interval);
-      }, 100);
-
       db.ref("files/" + code).set({
         name: file.name,
         data: fileData,
         createdAt: Date.now()
       }).then(() => {
-        // ✅ Code show only after data saved
+        // ✅ Only now show the code
         codeDisplay.textContent = code;
+
+        // ✅ Fill progress bar smoothly after upload
+        let width = 0;
+        const interval = setInterval(() => {
+          width += 10;
+          uploadProgress.style.width = `${width}%`;
+          if (width >= 100) clearInterval(interval);
+        }, 50);
 
         // 🗑️ Auto-delete after 5 mins
         setTimeout(() => {
@@ -73,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
   });
 
-  // ⬇️ Download File
+  // Download File
   startDownload.addEventListener("click", async () => {
     const code = codeInput.value.trim();
     if (!code || code.length !== 5) {
